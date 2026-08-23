@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Nature Powers</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#07120a;color:#fff;font-family:Arial,sans-serif;text-align:center}
+#wrap{max-width:440px;margin:auto;padding:8px}h1{margin:4px 0;font-size:26px}
+#game{display:block;width:100%;height:auto;border:2px solid #8bc34a;border-radius:12px;background:#183b20;touch-action:none}
+.controls{display:flex;justify-content:center;gap:7px;margin:8px 0}.controls button{font-size:19px;padding:11px 13px;border:0;border-radius:12px}
+#message{min-height:24px;color:#c9e8c9}
+#menu{position:fixed;inset:0;background:#07120a;display:flex;align-items:center;justify-content:center;z-index:3}
+.card{width:min(90vw,390px);background:#12351c;border:2px solid #8bc34a;border-radius:20px;padding:28px}
+.start{font-size:24px;padding:14px 28px;border:0;border-radius:14px}
+</style>
+</head>
+<body>
+<div id="menu"><div class="card"><h1>🌿 NATURE POWERS</h1><p>Gebruik natuurkrachten om de monsters te ontwijken en verzamel energie!</p><button class="start" id="start">▶️ START</button></div></div>
+<div id="wrap">
+<h1>🌿 Nature Powers</h1>
+<canvas id="game" width="420" height="620"></canvas>
+<div class="controls">
+<button id="left">⬅️</button><button id="power">🌱 KRACHT</button><button id="right">➡️</button>
+</div>
+<div id="message">Kies START om te beginnen.</div>
+</div>
+<script>
+const c=document.getElementById("game"),ctx=c.getContext("2d"),menu=document.getElementById("menu"),msg=document.getElementById("message");
+let p,enemies,energy,score,level,hp,shots,keys,spawn,running;
+
+function startGame(){
+ p={x:190,y:535,w:40,h:40};enemies=[];shots=[];keys={l:false,r:false};
+ energy=100;score=0;level=1;hp=3;spawn=20;running=true;menu.style.display="none";
+ msg.textContent="🌱 Plantenkracht actief!";
+}
+function power(){
+ if(!running||energy<10)return;
+ energy-=10;
+ shots.push({x:p.x+12,y:p.y-4,w:16,h:28,dy:-10});
+}
+function enemy(){
+ let w=32+Math.random()*20;
+ enemies.push({x:Math.random()*(420-w),y:-45,w,h:32+Math.random()*18,s:1.4+level*.22});
+}
+function hit(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+function end(text){running=false;msg.textContent=text+" Tik op START om opnieuw te spelen.";menu.style.display="flex"}
+function update(){
+ if(!running)return;
+ if(keys.l)p.x-=5;if(keys.r)p.x+=5;p.x=Math.max(0,Math.min(380,p.x));
+ energy=Math.min(100,energy+.12);
+ if(--spawn<=0){enemy();spawn=Math.max(16,45-level*4)}
+ shots.forEach(s=>s.y+=s.dy);
+ for(let i=enemies.length-1;i>=0;i--){
+  const e=enemies[i];e.y+=e.s;
+  for(let j=shots.length-1;j>=0;j--)if(hit(shots[j],e)){shots.splice(j,1);enemies.splice(i,1);score++;if(score%6===0&&level<5){level++;msg.textContent="⭐ Level "+level+"! Nieuwe natuurkracht!";}break}
+  if(!enemies[i])continue;
+  if(hit(e,p)){enemies.splice(i,1);hp--;if(hp<=0)end("💫 Je energie is op!");}
+  else if(e.y>650)enemies.splice(i,1);
+ }
+ if(level>=5&&score>=30)end("🏆 Je bent de Nature Guardian!");
+ shots=shots.filter(s=>s.y>-50);
+}
+function draw(){
+ ctx.clearRect(0,0,420,620);
+ ctx.fillStyle="#24572d";for(let i=0;i<15;i++){ctx.fillRect((i*57)%420,585-(i%4)*32,4,42)}
+ ctx.fillStyle="#fff";ctx.font="17px Arial";ctx.fillText(`❤️ ${hp}   ⭐ ${score}   🌿 Lv.${level}   ⚡ ${Math.floor(energy)}%`,10,25);
+ ctx.fillStyle="#67d24b";ctx.fillRect(p.x,p.y,p.w,p.h);
+ ctx.fillStyle="#123";ctx.fillRect(p.x+8,p.y+9,7,7);ctx.fillRect(p.x+25,p.y+9,7,7);
+ ctx.fillStyle="#9df36b";shots.forEach(s=>ctx.fillRect(s.x,s.y,s.w,s.h));
+ enemies.forEach(e=>{ctx.fillStyle="#8056a8";ctx.fillRect(e.x,e.y,e.w,e.h);ctx.fillStyle="#111";ctx.fillRect(e.x+7,e.y+8,6,6);ctx.fillRect(e.x+e.w-13,e.y+8,6,6)});
+}
+function loop(){update();draw();requestAnimationFrame(loop)}
+function hold(id,key){
+ const b=document.getElementById(id);b.onpointerdown=e=>{e.preventDefault();keys[key]=true};
+ ["pointerup","pointercancel","pointerleave"].forEach(v=>b.addEventListener(v,()=>keys[key]=false));
+}
+document.getElementById("start").onclick=startGame;
+document.getElementById("power").onpointerdown=e=>{e.preventDefault();power()};
+hold("left","l");hold("right","r");
+addEventListener("keydown",e=>{if(e.key==="ArrowLeft"||e.key==="a")keys.l=true;if(e.key==="ArrowRight"||e.key==="d")keys.r=true;if(e.code==="Space")power()});
+addEventListener("keyup",e=>{if(e.key==="ArrowLeft"||e.key==="a")keys.l=false;if(e.key==="ArrowRight"||e.key==="d")keys.r=false});
+running=false;loop();
+</script>
+</body>
+</html>
